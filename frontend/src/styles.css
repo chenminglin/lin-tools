@@ -1276,6 +1276,13 @@ textarea:focus {
   gap: 20px;
 }
 
+.image-resize-page {
+  max-width: 1180px;
+  margin: 24px auto 0;
+  display: grid;
+  gap: 20px;
+}
+
 .watermark-drop {
   min-height: 280px;
   display: grid;
@@ -1392,6 +1399,49 @@ textarea:focus {
 
 .watermark-error {
   margin-bottom: 0;
+}
+
+.image-resize-settings {
+  align-content: start;
+}
+
+.image-resize-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.image-resize-fields label {
+  display: grid;
+  gap: 7px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.image-resize-fields input {
+  width: 100%;
+}
+
+.image-resize-aspect {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.image-resize-aspect input {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--indigo);
+}
+
+.image-resize-settings small {
+  color: var(--muted);
+  line-height: 1.55;
 }
 
 .model-panel,

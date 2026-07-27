@@ -144,7 +144,7 @@ type AudioSilenceSegment = {
   duration: string;
 };
 
-type PageView = 'clipper' | 'merge' | 'calculator' | 'audio' | 'audioSpeed' | 'extractAudio' | 'downloader' | 'model' | 'watermark';
+type PageView = 'clipper' | 'merge' | 'calculator' | 'audio' | 'audioSpeed' | 'extractAudio' | 'downloader' | 'model' | 'watermark' | 'imageResize';
 
 const pagePaths: Record<PageView, string> = {
   clipper: '/video',
@@ -155,7 +155,8 @@ const pagePaths: Record<PageView, string> = {
   extractAudio: '/extract-audio',
   downloader: '/downloader',
   model: '/model',
-  watermark: '/watermark'
+  watermark: '/watermark',
+  imageResize: '/image-resize'
 };
 
 function pageFromPath(pathname: string): PageView {
@@ -167,6 +168,7 @@ function pageFromPath(pathname: string): PageView {
   if (pathname.startsWith('/downloader')) return 'downloader';
   if (pathname.startsWith('/model')) return 'model';
   if (pathname.startsWith('/watermark')) return 'watermark';
+  if (pathname.startsWith('/image-resize')) return 'imageResize';
   return 'clipper';
 }
 
@@ -818,6 +820,9 @@ function App() {
           <button type="button" className={activeView === 'watermark' ? 'active' : ''} onClick={() => navigate('watermark')}>
             <ImageIcon size={15} /> 图片去水印
           </button>
+          <button type="button" className={activeView === 'imageResize' ? 'active' : ''} onClick={() => navigate('imageResize')}>
+            <ImageIcon size={15} /> 图片改尺寸
+          </button>
           <button type="button" className={activeView === 'downloader' ? 'active' : ''} onClick={() => navigate('downloader')}>
             <CloudDownload size={15} /> 视频下载
           </button>
@@ -837,6 +842,8 @@ function App() {
         <MergePage />
       ) : activeView === 'watermark' ? (
         <WatermarkPage />
+      ) : activeView === 'imageResize' ? (
+        <ImageResizePage />
       ) : activeView === 'model' ? (
         <ModelDownloader />
       ) : activeView === 'downloader' ? (
@@ -2217,6 +2224,143 @@ function formatWatermarkMeta(meta: WatermarkMeta) {
   ].filter(Boolean);
 
   return parts.length > 0 ? `已处理：${parts.join('，')}。` : '已检测并处理图片。';
+}
+
+function ImageResizePage() {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [active, setActive] = useState(false);
+  const [file, setFile] = useState<File | null>(null);
+  const [imageUrl, setImageUrl] = useState('');
+  const [sourceSize, setSourceSize] = useState<{ width: number; height: number } | null>(null);
+  const [width, setWidth] = useState('');
+  const [height, setHeight] = useState('');
+  const [keepAspect, setKeepAspect] = useState(true);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [error, setError] = useState('');
+  const [downloadUrl, setDownloadUrl] = useState('');
+  const [previewUrl, setPreviewUrl] = useState('');
+  const [downloadName, setDownloadName] = useState('');
+  const [outputSize, setOutputSize] = useState('');
+
+  useEffect(() => () => {
+    if (imageUrl.startsWith('blob:')) URL.revokeObjectURL(imageUrl);
+  }, [imageUrl]);
+
+  const updateDimension = (value: string, changed: 'width' | 'height') => {
+    if (changed === 'width') setWidth(value);
+    else setHeight(value);
+    if (!keepAspect || !sourceSize || !/^\d+$/.test(value) || Number(value) < 1) return;
+    if (changed === 'width') {
+      setHeight(String(Math.max(1, Math.round(Number(value) * sourceSize.height / sourceSize.width))));
+    } else {
+      setWidth(String(Math.max(1, Math.round(Number(value) * sourceSize.width / sourceSize.height))));
+    }
+  };
+
+  const selectFile = (nextFile?: File) => {
+    if (!nextFile) return;
+    setError('');
+    setDownloadUrl('');
+    setPreviewUrl('');
+    setDownloadName('');
+    setOutputSize('');
+    setFile(nextFile);
+    if (imageUrl.startsWith('blob:')) URL.revokeObjectURL(imageUrl);
+    setImageUrl(URL.createObjectURL(nextFile));
+  };
+
+  const resize = async () => {
+    if (!file) {
+      setError('请先选择一张图片。');
+      return;
+    }
+    setError('');
+    setIsProcessing(true);
+    try {
+      const body = new FormData();
+      body.append('image', file);
+      body.append('width', width);
+      body.append('height', height);
+      body.append('keep_aspect', String(keepAspect));
+      const payload = await readJsonResponse<{ download_url: string; preview_url: string; output_name: string; width: number; height: number }>(
+        await fetch('/api/image-resize', { method: 'POST', body }),
+        '图片尺寸调整失败'
+      );
+      setDownloadUrl(payload.download_url);
+      setPreviewUrl(payload.preview_url);
+      setDownloadName(payload.output_name);
+      setOutputSize(`${payload.width} x ${payload.height}`);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : '图片尺寸调整失败');
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  return (
+    <main className="image-resize-page">
+      <section
+        className={`watermark-drop panel ${active ? 'active' : ''}`}
+        onDragEnter={(event) => { event.preventDefault(); setActive(true); }}
+        onDragOver={(event) => event.preventDefault()}
+        onDragLeave={() => setActive(false)}
+        onDrop={(event) => { event.preventDefault(); setActive(false); selectFile(event.dataTransfer.files?.[0]); }}
+      >
+        <input
+          ref={inputRef}
+          type="file"
+          accept="image/png,image/jpeg,image/webp,image/bmp,image/tiff,.png,.jpg,.jpeg,.webp,.bmp,.tif,.tiff"
+          hidden
+          onChange={(event) => { selectFile(event.target.files?.[0]); event.currentTarget.value = ''; }}
+        />
+        <span className="upload-icon"><ImageIcon size={32} /></span>
+        <h2>导入图片并调整分辨率</h2>
+        <p>支持 PNG、JPG、WebP、BMP、TIFF；导出为高质量 PNG。可保持原始比例，或按指定宽高拉伸。</p>
+        <button type="button" className="sample-button" onClick={() => inputRef.current?.click()}>
+          <Upload size={16} /> 选择图片文件
+        </button>
+      </section>
+
+      {error && <div className="error-box watermark-error"><AlertCircle size={17} /><span>{error}</span></div>}
+
+      <div className="watermark-grid">
+        <section className="panel watermark-preview-panel">
+          <div className="panel-title"><ImageIcon size={18} /><h2>预览</h2></div>
+          <div className="watermark-preview-grid">
+            <div className="watermark-preview-card">
+              <span>原图{sourceSize ? ` · ${sourceSize.width} x ${sourceSize.height}` : ''}</span>
+              {imageUrl ? <img src={imageUrl} alt="原图" onLoad={(event) => {
+                const image = event.currentTarget;
+                const dimensions = { width: image.naturalWidth, height: image.naturalHeight };
+                setSourceSize(dimensions);
+                setWidth(String(dimensions.width));
+                setHeight(String(dimensions.height));
+              }} /> : <div>等待上传图片</div>}
+            </div>
+            <div className="watermark-preview-card">
+              <span>调整结果{outputSize ? ` · ${outputSize}` : ''}</span>
+              {previewUrl ? <img src={previewUrl} alt="调整后的图片" /> : <div>处理完成后在这里预览</div>}
+            </div>
+          </div>
+        </section>
+
+        <aside className="panel watermark-status-panel image-resize-settings">
+          <div className="panel-title"><SlidersHorizontal size={18} /><h2>目标分辨率</h2></div>
+          <div className="image-resize-fields">
+            <label><span>宽度（px）</span><input inputMode="numeric" value={width} placeholder="例如 1920" onChange={(event) => updateDimension(event.target.value, 'width')} /></label>
+            <label><span>高度（px）</span><input inputMode="numeric" value={height} placeholder="例如 1080" onChange={(event) => updateDimension(event.target.value, 'height')} /></label>
+          </div>
+          <label className="image-resize-aspect"><input type="checkbox" checked={keepAspect} onChange={(event) => setKeepAspect(event.target.checked)} /><span>保持原始比例</span></label>
+          <small>{keepAspect ? '修改任一边会自动计算另一边；同时填写宽高时，图片会在该范围内等比缩放。' : '将严格使用填写的宽度和高度，图像可能发生拉伸。'}</small>
+          <button type="button" className="download-button" disabled={!file || isProcessing} onClick={() => void resize()}>
+            {isProcessing ? <Loader2 className="spin" size={18} /> : <Wand2 size={18} />}
+            {isProcessing ? '正在调整…' : '开始调整尺寸'}
+          </button>
+          {downloadUrl && <a className="download-button" href={downloadUrl} download={downloadName}><Download size={18} />下载 {downloadName}</a>}
+        </aside>
+      </div>
+    </main>
+  );
 }
 
 function VideoDownloader() {

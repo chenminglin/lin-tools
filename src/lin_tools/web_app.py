@@ -20,6 +20,7 @@ from urllib.parse import quote, urlparse
 from urllib.request import Request, urlopen
 
 from flask import Flask, jsonify, render_template, request, send_file, send_from_directory
+from PIL import Image, ImageOps, UnidentifiedImageError
 from werkzeug.utils import secure_filename
 
 from .ffmpeg_tools import build_audio_speed_command, build_audio_trim_command, build_clip_command, build_insert_silences_command, build_merge_command, find_ffmpeg, probe_media, run_ffmpeg
@@ -80,6 +81,7 @@ def create_app() -> Flask:
     @app.get("/merge")
     @app.get("/model")
     @app.get("/watermark")
+    @app.get("/image-resize")
     @app.get("/downloader")
     def frontend_page():
         return index()
@@ -541,6 +543,77 @@ def create_app() -> Flask:
 
         return jsonify({"job_id": job_id, "file_id": file_id, "preview_url": f"/media/{file_id}"})
 
+    @app.post("/api/image-resize")
+    def resize_image():
+        if "image" not in request.files:
+            return jsonify({"error": "请选择一张图片。"}), 400
+
+        file = request.files["image"]
+        if not file.filename:
+            return jsonify({"error": "文件名为空。"}), 400
+
+        try:
+            width = _parse_image_dimension(request.form.get("width"), "宽度")
+            height = _parse_image_dimension(request.form.get("height"), "高度")
+            keep_aspect = str(request.form.get("keep_aspect") or "true").lower() == "true"
+            if not keep_aspect and (width is None or height is None):
+                raise ValueError("不保持比例时必须同时填写宽度和高度。")
+            if width is None and height is None:
+                raise ValueError("请至少填写宽度或高度。")
+        except ValueError as exc:
+            return jsonify({"error": str(exc)}), 400
+
+        original_name = file.filename
+        suffix = Path(original_name).suffix.lower()
+        if suffix and suffix not in IMAGE_INPUT_EXTENSIONS:
+            return jsonify({"error": f"暂不支持该图片格式：{suffix}"}), 400
+
+        try:
+            with Image.open(file.stream) as source:
+                image = ImageOps.exif_transpose(source)
+                source_width, source_height = image.size
+                if source_width <= 0 or source_height <= 0:
+                    raise ValueError("图片尺寸无效。")
+                target_width, target_height = _calculate_image_resize(
+                    source_width, source_height, width, height, keep_aspect
+                )
+                resized = image.resize((target_width, target_height), Image.Resampling.LANCZOS)
+                if resized.mode not in {"RGB", "RGBA"}:
+                    resized = resized.convert("RGBA" if "transparency" in image.info else "RGB")
+        except UnidentifiedImageError:
+            return jsonify({"error": "无法识别该图片文件。"}), 400
+        except (OSError, ValueError) as exc:
+            return jsonify({"error": f"处理图片失败：{exc}"}), 400
+
+        job_id = uuid.uuid4().hex
+        base_name = secure_filename(Path(original_name).stem) or "image"
+        output_name = f"{base_name}_{target_width}x{target_height}_{job_id[:8]}.png"
+        output_path = OUTPUT_DIR / output_name
+        try:
+            resized.save(output_path, format="PNG")
+        except OSError as exc:
+            return jsonify({"error": f"保存图片失败：{exc}"}), 500
+
+        with state_lock:
+            jobs[job_id] = {
+                "id": job_id,
+                "status": "done",
+                "progress": 100.0,
+                "message": "图片尺寸调整完成",
+                "output_path": output_path,
+                "output_name": output_name,
+                "error": None,
+                "meta": {"width": target_width, "height": target_height, "keep_aspect": keep_aspect},
+            }
+        return jsonify({
+            "job_id": job_id,
+            "download_url": f"/download/{job_id}",
+            "preview_url": f"/download/{job_id}?preview=1",
+            "output_name": output_name,
+            "width": target_width,
+            "height": target_height,
+        })
+
     @app.post("/api/export")
     def export_video():
         data = request.get_json(silent=True) or {}
@@ -813,9 +886,50 @@ def create_app() -> Flask:
             output_name = str(job["output_name"])
         if not output_path.exists():
             return jsonify({"error": "输出文件不存在。"}), 404
-        return send_file(output_path, as_attachment=True, download_name=output_name)
+        preview = request.args.get("preview") == "1"
+        return send_file(output_path, as_attachment=not preview, download_name=output_name)
 
     return app
+
+
+MAX_IMAGE_DIMENSION = 16_384
+
+
+def _parse_image_dimension(value: Any, label: str) -> int | None:
+    text = str(value or "").strip()
+    if not text:
+        return None
+    try:
+        dimension = int(text)
+    except ValueError as exc:
+        raise ValueError(f"{label}必须是整数。") from exc
+    if not 1 <= dimension <= MAX_IMAGE_DIMENSION:
+        raise ValueError(f"{label}必须在 1 到 {MAX_IMAGE_DIMENSION} 之间。")
+    return dimension
+
+
+def _calculate_image_resize(
+    source_width: int,
+    source_height: int,
+    width: int | None,
+    height: int | None,
+    keep_aspect: bool,
+) -> tuple[int, int]:
+    if not keep_aspect:
+        assert width is not None and height is not None
+        return width, height
+    if width is None:
+        assert height is not None
+        target_width, target_height = max(1, round(source_width * height / source_height)), height
+    elif height is None:
+        target_width, target_height = width, max(1, round(source_height * width / source_width))
+    else:
+        scale = min(width / source_width, height / source_height)
+        target_width = max(1, round(source_width * scale))
+        target_height = max(1, round(source_height * scale))
+    if target_width > MAX_IMAGE_DIMENSION or target_height > MAX_IMAGE_DIMENSION:
+        raise ValueError(f"保持比例后的尺寸不能超过 {MAX_IMAGE_DIMENSION} 像素。")
+    return target_width, target_height
 
 
 def _run_job(job_id: str, command: list[str], expected_duration: float | None) -> None:
