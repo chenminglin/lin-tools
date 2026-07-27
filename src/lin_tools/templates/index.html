@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Lin Video Clipper</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}" />
+  </head>
+  <body>
+    <main class="app-shell">
+      <section class="workspace">
+        <header class="topbar">
+          <div>
+            <h1>Lin Video Clipper</h1>
+            <p>本地上传，本地转码，多格式视频裁剪工具</p>
+          </div>
+          <div class="format-count">{{ formats|length }} 种导出格式</div>
+        </header>
+
+        <div class="tool-grid">
+          <section class="panel media-panel">
+            <div id="dropzone" class="dropzone" tabindex="0">
+              <input id="videoInput" type="file" accept="video/*" hidden />
+              <div class="drop-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m17 8-5-5-5 5"/><path d="M12 3v12"/></svg>
+              </div>
+              <strong>拖入视频或点击选择</strong>
+              <span>支持 MP4、MKV、MOV、AVI、WebM、FLV、WMV、TS 等常见格式</span>
+            </div>
+
+            <video id="preview" class="preview" controls playsinline></video>
+
+            <div class="mark-row">
+              <button id="markStart" type="button" class="icon-button">
+                <svg viewBox="0 0 24 24"><path d="M6 4v16"/><path d="M18 8v8"/><path d="m14 12 4-4v8Z"/></svg>
+                当前设为起点
+              </button>
+              <button id="markEnd" type="button" class="icon-button">
+                <svg viewBox="0 0 24 24"><path d="M18 4v16"/><path d="M6 8v8"/><path d="m10 12-4-4v8Z"/></svg>
+                当前设为终点
+              </button>
+            </div>
+          </section>
+
+          <section class="panel control-panel">
+            <div class="section-title">
+              <h2>裁剪参数</h2>
+              <span id="fileState">未选择文件</span>
+            </div>
+
+            <div class="fields two-col">
+              <label>
+                <span>开始时间</span>
+                <input id="startTime" type="text" value="00:00.000" />
+              </label>
+              <label>
+                <span>结束时间</span>
+                <input id="endTime" type="text" placeholder="自动读取" />
+              </label>
+            </div>
+
+            <label class="field">
+              <span>导出格式</span>
+              <select id="formatSelect">
+                {% for format in formats %}
+                  <option value="{{ format.key }}" data-kind="{{ format.kind }}" data-audio="{{ '1' if format.supports_audio else '0' }}">
+                    {{ format.label }}
+                  </option>
+                {% endfor %}
+              </select>
+            </label>
+
+            <div class="field">
+              <span>分辨率缩放</span>
+              <div class="segmented" role="group" aria-label="分辨率缩放">
+                <button type="button" data-scale="1.0" class="active">100%</button>
+                <button type="button" data-scale="0.75">75%</button>
+                <button type="button" data-scale="0.5">50%</button>
+                <button type="button" data-scale="0.25">25%</button>
+              </div>
+            </div>
+
+            <label class="toggle-line">
+              <input id="includeAudio" type="checkbox" checked />
+              <span>保留音频轨道</span>
+            </label>
+
+            <button id="exportButton" type="button" class="primary-button" disabled>
+              <svg viewBox="0 0 24 24"><path d="M14.5 4.5 4 15"/><path d="m5 5 14 14"/><circle cx="5" cy="5" r="2"/><circle cx="19" cy="19" r="2"/></svg>
+              开始裁剪 / 转换
+            </button>
+
+            <div class="progress-box">
+              <div class="progress-meta">
+                <span id="statusText">等待上传视频</span>
+                <strong id="progressText">0%</strong>
+              </div>
+              <div class="progress-track">
+                <div id="progressBar"></div>
+              </div>
+            </div>
+
+            <a id="downloadLink" class="download-link" href="#" hidden>
+              <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg>
+              下载处理后的视频
+            </a>
+          </section>
+        </div>
+
+        <section class="panel info-panel">
+          <div class="section-title">
+            <h2>视频信息</h2>
+            <span id="durationHint">等待读取</span>
+          </div>
+          <div class="info-grid">
+            <div><span>文件名</span><strong id="infoName">-</strong></div>
+            <div><span>时长</span><strong id="infoDuration">-</strong></div>
+            <div><span>分辨率</span><strong id="infoResolution">-</strong></div>
+            <div><span>视频编码</span><strong id="infoVideoCodec">-</strong></div>
+            <div><span>音频编码</span><strong id="infoAudioCodec">-</strong></div>
+            <div><span>文件大小</span><strong id="infoSize">-</strong></div>
+          </div>
+        </section>
+      </section>
+    </main>
+
+    <script src="{{ url_for('static', filename='app.js') }}"></script>
+  </body>
+</html>

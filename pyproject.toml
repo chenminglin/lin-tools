@@ -1,0 +1,33 @@
+[build-system]
+requires = ["setuptools>=69", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "lin-tools"
+version = "0.1.0"
+description = "Local Python video clipping and format conversion tools."
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "Flask>=3.0.0",
+    "huggingface-hub>=0.23.0",
+    "imageio-ffmpeg>=0.5.1",
+    "Pillow>=10.0.0",
+    "yt-dlp>=2025.1.15",
+]
+
+[project.scripts]
+lin-video-clipper = "lin_tools.video_clipper_cli:main"
+lin-video-clipper-gui = "lin_tools.video_clipper_gui:main"
+lin-video-clipper-web = "lin_tools.web_app:main"
+lin-audio-split-by-videos = "lin_tools.audio_splitter_cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+lin_tools = ["templates/*.html", "static/*.css", "static/*.js", "watermark_core/*.js", "watermark_core/*.mjs", "watermark_core/*.txt", "watermark_core/package.json"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]
