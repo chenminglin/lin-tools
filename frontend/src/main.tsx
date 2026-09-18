@@ -1292,7 +1292,7 @@ function HomeToolIcon({
   const [failed, setFailed] = useState(false);
 
   return (
-    <span className="tool-icon" aria-hidden="true">
+    <span className={`tool-icon${failed ? '' : ' character'}`} aria-hidden="true">
       {failed ? <Icon size={22} /> : <img src={image} alt="" className="tool-character-icon" onError={() => setFailed(true)} />}
     </span>
   );

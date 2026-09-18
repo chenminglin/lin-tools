@@ -220,6 +220,12 @@ h3,
 .tool-entry:nth-child(4n + 3) .tool-icon { background: var(--lilac) !important; }
 .tool-entry:nth-child(4n)     .tool-icon { background: var(--peach) !important; }
 
+.tool-entry .tool-icon.character {
+  background: transparent !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+}
+
 .tool-arrow {
   color: var(--text) !important;
   font-weight: 700 !important;

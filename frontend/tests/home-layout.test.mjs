@@ -4,6 +4,7 @@ import test from 'node:test';
 
 const mainSource = await readFile(new URL('../src/main.tsx', import.meta.url), 'utf8');
 const stylesSource = await readFile(new URL('../src/styles.css', import.meta.url), 'utf8');
+const themeSource = await readFile(new URL('../src/theme.css', import.meta.url), 'utf8');
 
 test('首页隐藏工具导航和底部栏，工具页继续显示', () => {
   assert.match(mainSource, /const showHeaderDetails = activeView !== 'home';/);
@@ -43,4 +44,9 @@ test('首页角色图标加载失败时显示 Lucide 后备', () => {
   assert.match(mainSource, /onError=\{\(\) => setFailed\(true\)\}/);
   assert.match(mainSource, /failed \? <Icon size=\{22\} \/> : <img src=\{image\}/);
   assert.match(stylesSource, /\.tool-character-icon\s*\{[^}]*object-fit:\s*contain/s);
+});
+
+test('角色插画不继承 Lucide 图标底板', () => {
+  assert.match(mainSource, /className=\{`tool-icon\$\{failed \? '' : ' character'\}`\}/);
+  assert.match(themeSource, /\.tool-entry \.tool-icon\.character\s*\{[^}]*background:\s*transparent\s*!important;[^}]*border:\s*0\s*!important;/s);
 });
