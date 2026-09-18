@@ -809,6 +809,8 @@ function App() {
     });
   };
 
+  const showHeaderDetails = activeView !== 'home';
+
   return (
     <div className="app">
       <header className="app-header">
@@ -816,51 +818,57 @@ function App() {
           <div className="brand-icon"><Scissors size={23} /></div>
           <div>
             <h1>Web Video Clipper</h1>
-            <p>Python + FFmpeg 后端，多格式本地视频裁剪</p>
+            {showHeaderDetails && (
+              <p>Python + FFmpeg 后端，多格式本地视频裁剪</p>
+            )}
           </div>
         </div>
-        <div className="header-actions">
-          <button type="button" className={activeView === 'home' ? 'active' : ''} onClick={() => navigate('home')}>
-            <Layers size={15} /> 首页
-          </button>
-          <button type="button" className={activeView === 'clipper' ? 'active' : ''} onClick={() => navigate('clipper')}>
-            <Scissors size={15} /> 裁剪工具
-          </button>
-          <button type="button" className={activeView === 'merge' ? 'active' : ''} onClick={() => navigate('merge')}>
-            <Layers size={15} /> 视频合并
-          </button>
-          <button type="button" className={activeView === 'syncPlay' ? 'active' : ''} onClick={() => navigate('syncPlay')}>
-            <Play size={15} /> 同步播放
-          </button>
-          <button type="button" className={activeView === 'calculator' ? 'active' : ''} onClick={() => navigate('calculator')}>
-            <Calculator size={15} /> 比例计算器
-          </button>
-          <button type="button" className={activeView === 'audio' ? 'active' : ''} onClick={() => navigate('audio')}>
-            <Music size={15} /> 音频信息
-          </button>
-          <button type="button" className={activeView === 'extractAudio' ? 'active' : ''} onClick={() => navigate('extractAudio')}>
-            <Music size={15} /> 音频提取
-          </button>
-          <button type="button" className={activeView === 'audioSpeed' ? 'active' : ''} onClick={() => navigate('audioSpeed')}>
-            <SlidersHorizontal size={15} /> 音频变速
-          </button>
-          <button type="button" className={activeView === 'watermark' ? 'active' : ''} onClick={() => navigate('watermark')}>
-            <ImageIcon size={15} /> 图片去水印
-          </button>
-          <button type="button" className={activeView === 'imageResize' ? 'active' : ''} onClick={() => navigate('imageResize')}>
-            <ImageIcon size={15} /> 图片改尺寸
-          </button>
-          <button type="button" className={activeView === 'downloader' ? 'active' : ''} onClick={() => navigate('downloader')}>
-            <CloudDownload size={15} /> 视频下载
-          </button>
-          <button type="button" className={activeView === 'model' ? 'active' : ''} onClick={() => navigate('model')}>
-            <CloudDownload size={15} /> 模型下载
-          </button>
-        </div>
-        <div className="header-badges">
-          <span><ShieldCheck size={15} /> 本地处理</span>
-          <span><Video size={15} /> {formats.length} 种格式</span>
-        </div>
+        {showHeaderDetails && (
+          <div className="header-actions">
+            <button type="button" onClick={() => navigate('home')}>
+              <Layers size={15} /> 首页
+            </button>
+            <button type="button" className={activeView === 'clipper' ? 'active' : ''} onClick={() => navigate('clipper')}>
+              <Scissors size={15} /> 裁剪工具
+            </button>
+            <button type="button" className={activeView === 'merge' ? 'active' : ''} onClick={() => navigate('merge')}>
+              <Layers size={15} /> 视频合并
+            </button>
+            <button type="button" className={activeView === 'syncPlay' ? 'active' : ''} onClick={() => navigate('syncPlay')}>
+              <Play size={15} /> 同步播放
+            </button>
+            <button type="button" className={activeView === 'calculator' ? 'active' : ''} onClick={() => navigate('calculator')}>
+              <Calculator size={15} /> 比例计算器
+            </button>
+            <button type="button" className={activeView === 'audio' ? 'active' : ''} onClick={() => navigate('audio')}>
+              <Music size={15} /> 音频信息
+            </button>
+            <button type="button" className={activeView === 'extractAudio' ? 'active' : ''} onClick={() => navigate('extractAudio')}>
+              <Music size={15} /> 音频提取
+            </button>
+            <button type="button" className={activeView === 'audioSpeed' ? 'active' : ''} onClick={() => navigate('audioSpeed')}>
+              <SlidersHorizontal size={15} /> 音频变速
+            </button>
+            <button type="button" className={activeView === 'watermark' ? 'active' : ''} onClick={() => navigate('watermark')}>
+              <ImageIcon size={15} /> 图片去水印
+            </button>
+            <button type="button" className={activeView === 'imageResize' ? 'active' : ''} onClick={() => navigate('imageResize')}>
+              <ImageIcon size={15} /> 图片改尺寸
+            </button>
+            <button type="button" className={activeView === 'downloader' ? 'active' : ''} onClick={() => navigate('downloader')}>
+              <CloudDownload size={15} /> 视频下载
+            </button>
+            <button type="button" className={activeView === 'model' ? 'active' : ''} onClick={() => navigate('model')}>
+              <CloudDownload size={15} /> 模型下载
+            </button>
+          </div>
+        )}
+        {showHeaderDetails && (
+          <div className="header-badges">
+            <span><ShieldCheck size={15} /> 本地处理</span>
+            <span><Video size={15} /> {formats.length} 种格式</span>
+          </div>
+        )}
       </header>
 
       {activeView === 'home' ? (
