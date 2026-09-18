@@ -1,0 +1,528 @@
+/* ==========================================================================
+   Lin Tools · 教育风主题（Neubrutalism + Pastel）
+   --------------------------------------------------------------------------
+   这是一层「皮肤」：在 styles.css 之后加载，只覆盖设计令牌与视觉表现。
+   不改任何组件类名、不改 DOM 结构，因此功能零风险。
+
+   取色与几何参数来自参考图实测：
+     画布 #FFF9F6（暖米白）· 描边 #2D3748（墨色 3px）· 主绿 #22C55F
+     硬投影 2/3/4/6px 偏移、零模糊 · 圆角 10/12/14/18/22px
+     粉彩点缀 #FDBDB4 蜜桃 / #ADD8E6 浅蓝 / #99FF99 薄荷 / #E6E6FA 淡紫
+
+   回退方式：删除本文件 + main.tsx 里的 `import './theme.css';` 一行即可。
+   ========================================================================== */
+
+/* --------------------------------------------------------------------------
+   1 · 字体：本地可变字体，离线可用（不依赖 Google Fonts）
+   -------------------------------------------------------------------------- */
+@font-face {
+  font-family: 'Fredoka';
+  font-style: normal;
+  font-weight: 300 700;
+  font-display: swap;
+  src: url('./fonts/fredoka.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Nunito';
+  font-style: normal;
+  font-weight: 200 1000;
+  font-display: swap;
+  src: url('./fonts/nunito.woff2') format('woff2');
+}
+
+/* --------------------------------------------------------------------------
+   2 · 设计令牌
+   只覆盖需要变化的变量，其余（--shell / --ease / --t-* 等）沿用 styles.css
+   -------------------------------------------------------------------------- */
+:root {
+  color-scheme: light;
+
+  /* --- 品牌绿（教育绿，替代原 indigo）--- */
+  --brand-50:   #eaf9ef;
+  --brand-100:  #d6f5e1;
+  --brand-200:  #a7e8bf;
+  --brand-400:  #4ade80;
+  --brand-600:  #22c55f;
+  --brand-700:  #16a34a;
+
+  /* --- 画布与表面（暖米白）--- */
+  --bg:            #fff9f6;
+  --surface:       #ffffff;
+  --surface-2:     #fff9f6;
+  --surface-3:     #f7f1ea;
+  --surface-glass: rgba(255, 255, 255, 0.94);
+  --header-glass:  rgba(255, 249, 246, 0.94);
+
+  /* --- 描边：墨色。Neubrutalism 的核心，也是最容易出问题的一处 --- */
+  --border:        #2d3748;
+  --border-strong: #1a202c;
+
+  /* --- 文字：对白底 11.6 / 7.2 / 4.6 : 1，均过 WCAG AA --- */
+  --text:   #2d3748;
+  --text-2: #4a5568;
+  --text-3: #64748b;
+
+  /* --- 语义色：保留原有色相，边框统一墨色以贴合风格 --- */
+  --success:        #15803d;
+  --success-bg:     #eaf9ef;
+  --success-border: #2d3748;
+
+  --danger:         #c2410c;
+  --danger-bg:      #fdeceb;
+  --danger-border:  #2d3748;
+
+  --warn:           #a16207;
+  --warn-bg:        #fff7e0;
+  --warn-border:    #2d3748;
+
+  --info:           #185fa5;
+  --info-bg:        #e6f1fb;
+  --info-border:    #2d3748;
+
+  /* --- 圆角：整体放大 --- */
+  --r-xs:   10px;
+  --r-sm:   12px;
+  --r-md:   14px;
+  --r-lg:   18px;
+  --r-xl:   22px;
+
+  /* --- 立面：硬投影，零模糊 --- */
+  --sh-xs:    2px 2px 0 var(--border);
+  --sh-sm:    3px 3px 0 var(--border);
+  --sh-md:    4px 4px 0 var(--border);
+  --sh-lg:    6px 6px 0 var(--border);
+  --sh-brand: 3px 3px 0 var(--border);
+
+  /* --- 字体：Fredoka 标题 + Nunito 正文 --- */
+  --font-sans:    'Nunito', ui-sans-serif, system-ui, -apple-system, 'PingFang SC', 'Microsoft YaHei UI', sans-serif;
+  --font-display: 'Fredoka', 'Nunito', ui-sans-serif, system-ui, 'PingFang SC', sans-serif;
+  --font-mono:    ui-monospace, 'SF Mono', SFMono-Regular, Menlo, Consolas, monospace;
+
+  /* --- 焦点环 --- */
+  --ring: 0 0 0 3px rgba(34, 197, 95, 0.45);
+
+  /* --- 粉彩点缀 --- */
+  --peach: #fdbcb4;
+  --baby:  #add8e6;
+  --mint:  #99ff99;
+  --lilac: #e6e6fa;
+}
+
+/* --------------------------------------------------------------------------
+   3 · 全局基底
+   -------------------------------------------------------------------------- */
+body,
+.app {
+  background: var(--bg) !important;
+  font-family: var(--font-sans) !important;
+  color: var(--text) !important;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1,
+h2,
+h3,
+.brand h1,
+.panel-title,
+.calculator-section-title,
+.tool-copy strong {
+  font-family: var(--font-display) !important;
+  font-weight: 600 !important;
+  letter-spacing: -0.01em;
+}
+
+/* --------------------------------------------------------------------------
+   4 · 页头与导航
+   导航容器做成一个带硬投影的白色 dock，当前页是实心绿色药丸
+   -------------------------------------------------------------------------- */
+.app-header {
+  background: var(--header-glass) !important;
+  border-bottom: 3px solid var(--border) !important;
+  backdrop-filter: blur(10px);
+}
+
+.brand-icon {
+  background: var(--brand-600) !important;
+  border: 3px solid var(--border) !important;
+  border-radius: 15px !important;
+  box-shadow: var(--sh-sm) !important;
+  color: #ffffff !important;
+}
+
+.header-actions {
+  padding: 6px !important;
+  background: var(--surface) !important;
+  border: 3px solid var(--border) !important;
+  border-radius: var(--r-pill) !important;
+  box-shadow: var(--sh-md) !important;
+}
+
+.header-actions button {
+  font-family: var(--font-display) !important;
+  font-weight: 500 !important;
+  border-radius: var(--r-pill) !important;
+  color: var(--text-2) !important;
+  background: transparent !important;
+  border: 2px solid transparent !important;
+  transition: background var(--t-fast) var(--ease), color var(--t-fast) var(--ease);
+}
+
+.header-actions button:hover {
+  background: var(--brand-50) !important;
+  color: var(--text) !important;
+}
+
+.header-actions button.active {
+  background: var(--brand-600) !important;
+  color: var(--text) !important;   /* 墨色压绿 = 5.2:1，白字只有 2.3:1 */
+  border: 2px solid var(--border) !important;
+  border-radius: var(--r-pill) !important;
+  box-shadow: 2px 2px 0 var(--border) !important;
+  font-weight: 600 !important;
+}
+
+/* --------------------------------------------------------------------------
+   5 · 首页工具卡片
+   -------------------------------------------------------------------------- */
+.tool-entry {
+  background: var(--surface) !important;
+  border: 3px solid var(--border) !important;
+  border-radius: var(--r-xl) !important;
+  box-shadow: var(--sh-md) !important;
+  transition: transform 160ms var(--ease), box-shadow 160ms var(--ease) !important;
+}
+
+.tool-entry:hover {
+  transform: translate(-2px, -2px) !important;
+  box-shadow: var(--sh-lg) !important;
+}
+
+.tool-entry.featured {
+  background: #fffdf3 !important;
+}
+
+/* 原样式底部有一条渐变发丝线，与新描边重复，去掉 */
+.tool-entry::after {
+  display: none !important;
+}
+
+.tool-icon {
+  border: 3px solid var(--border) !important;
+  border-radius: 14px !important;
+  box-shadow: none !important;
+  color: var(--text) !important;
+}
+
+/* 粉彩轮转：给卡片图标上不同底色，避免整页只有一种色 */
+.tool-entry:nth-child(4n + 1) .tool-icon { background: var(--baby)  !important; }
+.tool-entry:nth-child(4n + 2) .tool-icon { background: var(--mint)  !important; }
+.tool-entry:nth-child(4n + 3) .tool-icon { background: var(--lilac) !important; }
+.tool-entry:nth-child(4n)     .tool-icon { background: var(--peach) !important; }
+
+.tool-arrow {
+  color: var(--text) !important;
+  font-weight: 700 !important;
+}
+
+/* --------------------------------------------------------------------------
+   6 · 面板与卡片
+   只有「最外层」卡片带硬投影；嵌套在卡片内部的自动降级为细描边、无投影，
+   否则工具页的 4/6 宫格会互相打架（裁剪页的分辨率格、滤镜格最明显）
+   -------------------------------------------------------------------------- */
+.panel,
+.upload-card,
+.video-card,
+.toggle-card,
+.progress-panel,
+.current-file-panel,
+.audio-player-panel,
+.watermark-preview-card,
+.summary-box,
+.merge-empty,
+.sync-empty,
+.error-box,
+.success-box,
+.resolution-card,
+.calculator-result,
+.calculator-source,
+.audio-result-preview,
+.file-progress-item,
+.trim-timeline {
+  background: var(--surface) !important;
+  border: 3px solid var(--border) !important;
+  border-radius: var(--r-lg) !important;
+  box-shadow: var(--sh-md) !important;
+}
+
+/* 嵌套卡片降级 */
+:is(.panel, .upload-card, .video-card, .toggle-card, .progress-panel,
+    .current-file-panel, .audio-player-panel, .watermark-preview-card,
+    .summary-box, .resolution-card, .calculator-result, .calculator-source,
+    .audio-result-preview, .file-progress-item, .trim-timeline, .upload-main)
+  :is(.panel, .upload-card, .video-card, .toggle-card, .progress-panel,
+      .current-file-panel, .audio-player-panel, .watermark-preview-card,
+      .summary-box, .resolution-card, .calculator-result, .calculator-source,
+      .audio-result-preview, .file-progress-item, .trim-timeline, .upload-main) {
+  box-shadow: none !important;
+  border-width: 2px !important;
+}
+
+/* 语义提示框保留各自的底色 */
+.error-box   { background: var(--danger-bg)  !important; color: var(--danger)  !important; }
+.success-box { background: var(--success-bg) !important; color: var(--success) !important; }
+
+/* 小信息块：细描边、不要投影 */
+.info-item,
+.merge-item,
+.watermark-meta,
+.sync-control-meta,
+.sync-video-index,
+.merge-item-head,
+.merge-item-meta,
+.mark-actions,
+.zoom-actions,
+.merge-item-actions,
+.sync-video-actions,
+.audio-silence-row {
+  border: 2px solid var(--border) !important;
+  border-radius: var(--r-md) !important;
+  box-shadow: none !important;
+}
+
+/* --------------------------------------------------------------------------
+   7 · 拖拽区：虚线墨边 + 浅绿底
+   -------------------------------------------------------------------------- */
+.merge-drop,
+.sync-drop,
+.audio-drop,
+.watermark-drop,
+.upload-main {
+  background: var(--brand-50) !important;
+  border: 3px dashed var(--border) !important;
+  border-radius: var(--r-xl) !important;
+  box-shadow: var(--sh-sm) !important;
+}
+
+.upload-icon,
+.ghost-icon {
+  border: 3px solid var(--border) !important;
+  border-radius: 14px !important;
+  box-shadow: none !important;
+}
+
+/* --------------------------------------------------------------------------
+   8 · 按钮
+   绿底一律配墨字（5.2:1）；白底按钮走描边 + 硬投影
+   -------------------------------------------------------------------------- */
+.primary-button,
+.download-button,
+.sync-play-button {
+  background: var(--brand-600) !important;
+  color: var(--text) !important;
+  border: 3px solid var(--border) !important;
+  border-radius: var(--r-pill) !important;
+  box-shadow: var(--sh-sm) !important;
+  font-family: var(--font-display) !important;
+  font-weight: 600 !important;
+  transition: transform 160ms var(--ease), box-shadow 160ms var(--ease) !important;
+}
+
+.primary-button:hover,
+.download-button:hover,
+.sync-play-button:hover {
+  transform: translate(-2px, -2px) !important;
+  box-shadow: 5px 5px 0 var(--border) !important;
+}
+
+/* 禁用态：不要用整体 opacity（绿底降透明度后墨字几乎看不清），
+   改为灰底 + 墨边 + 弱化文字 */
+.primary-button:disabled,
+.primary-button.disabled,
+.download-button:disabled,
+.download-button.disabled,
+.sync-play-button:disabled,
+.sync-play-button.disabled {
+  background: var(--surface-3) !important;
+  color: var(--text-2) !important;
+  border-color: var(--border) !important;
+  opacity: 1 !important;
+  transform: none !important;
+  box-shadow: none !important;
+  cursor: not-allowed !important;
+}
+
+.sample-button,
+.ghost-link {
+  background: var(--surface) !important;
+  color: var(--text) !important;
+  border: 3px solid var(--border) !important;
+  border-radius: var(--r-pill) !important;
+  box-shadow: var(--sh-xs) !important;
+  font-weight: 600 !important;
+}
+
+.sample-button:hover,
+.ghost-link:hover {
+  background: var(--brand-50) !important;
+  transform: translate(-1px, -1px) !important;
+  box-shadow: var(--sh-sm) !important;
+}
+
+/* --------------------------------------------------------------------------
+   9 · 表单控件
+   -------------------------------------------------------------------------- */
+input,
+select,
+textarea {
+  background: var(--surface) !important;
+  color: var(--text) !important;
+  border: 2px solid var(--border) !important;
+  border-radius: var(--r-md) !important;
+  font-family: var(--font-sans) !important;
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+  outline: none;
+  box-shadow: var(--ring) !important;
+}
+
+/* 分段控件 / 步进器：单行排布，用胶囊最贴合参考图 */
+.segmented-control,
+.ratio-presets,
+.speed-presets,
+.micro-stepper,
+.image-resize-mode {
+  background: var(--surface) !important;
+  border: 2px solid var(--border) !important;
+  border-radius: var(--r-pill) !important;
+  box-shadow: none !important;
+}
+
+/* 多行容器不能用胶囊：创意滤镜是 6 项 3 行、分辨率是 4 格，
+   套胶囊会撑成一个巨大的椭圆（已实测踩到） */
+.filter-list,
+.scale-grid {
+  padding: 5px !important;
+  background: var(--surface) !important;
+  border: 2px solid var(--border) !important;
+  border-radius: var(--r-lg) !important;
+  box-shadow: none !important;
+}
+
+.segmented-control button,
+.ratio-presets button,
+.speed-presets button {
+  border-radius: var(--r-pill) !important;
+  font-weight: 600 !important;
+  color: var(--text-2) !important;
+  background: transparent !important;
+  border: 2px solid transparent !important;
+  font-family: var(--font-sans) !important;
+}
+
+.filter-list button {
+  border-radius: var(--r-md) !important;
+  font-weight: 600 !important;
+  color: var(--text-2) !important;
+  background: transparent !important;
+  border: 2px solid transparent !important;
+  font-family: var(--font-sans) !important;
+}
+
+.segmented-control button:hover,
+.filter-list button:hover,
+.ratio-presets button:hover,
+.speed-presets button:hover {
+  background: var(--brand-50) !important;
+  color: var(--text) !important;
+}
+
+.segmented-control button.active,
+.ratio-presets button.active,
+.speed-presets button.active {
+  background: var(--brand-600) !important;
+  color: var(--text) !important;
+  border: 2px solid var(--border) !important;
+  border-radius: var(--r-pill) !important;
+}
+
+.filter-list button.active {
+  background: var(--brand-600) !important;
+  color: var(--text) !important;
+  border: 2px solid var(--border) !important;
+  border-radius: var(--r-md) !important;
+}
+
+/* --------------------------------------------------------------------------
+   10 · 进度条
+   -------------------------------------------------------------------------- */
+.progress-track,
+.audio-waveform-track {
+  background: var(--surface-3) !important;
+  border: 2px solid var(--border) !important;
+  border-radius: var(--r-pill) !important;
+}
+
+.progress-track div {
+  background: linear-gradient(90deg, var(--brand-400), var(--brand-700)) !important;
+  border-radius: inherit !important;
+}
+
+/* --------------------------------------------------------------------------
+   11 · 视频 / 音频内部：克制的覆盖
+   深色预览区与时间轴保持原样，只修 3 处硬编码的 indigo 残留，
+   避免换绿后出现「绿描边 + 紫底」的撞色
+   -------------------------------------------------------------------------- */
+.trim-selection {
+  border-top-color: var(--brand-600) !important;
+  border-bottom-color: var(--brand-600) !important;
+  background: rgba(34, 197, 95, 0.16) !important;
+}
+
+.trim-handle {
+  box-shadow: 2px 2px 0 var(--border) !important;
+}
+
+.trim-handle-end {
+  box-shadow: 2px 2px 0 var(--border) !important;
+}
+
+.video-toolbar strong {
+  color: var(--text) !important;
+  background: var(--brand-600) !important;
+}
+
+/* --------------------------------------------------------------------------
+   12 · 页脚
+   -------------------------------------------------------------------------- */
+.footer {
+  border-top: 3px solid var(--border) !important;
+  background: transparent !important;
+}
+
+/* --------------------------------------------------------------------------
+   13 · 动效收敛与无障碍
+   -------------------------------------------------------------------------- */
+@media (prefers-reduced-motion: reduce) {
+  .tool-entry,
+  .primary-button,
+  .download-button,
+  .sync-play-button,
+  .sample-button,
+  .ghost-link,
+  .header-actions button {
+    transition: none !important;
+  }
+
+  .tool-entry:hover,
+  .primary-button:hover,
+  .download-button:hover,
+  .sync-play-button:hover,
+  .sample-button:hover,
+  .ghost-link:hover {
+    transform: none !important;
+  }
+}

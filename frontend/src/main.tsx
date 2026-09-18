@@ -18,18 +18,17 @@ import {
   Play,
   RotateCcw,
   Scissors,
-  ShieldCheck,
   SlidersHorizontal,
   Sparkles,
   Trash2,
   Upload,
-  Video,
   Volume2,
   VolumeX,
   Wand2,
   ZoomIn
 } from 'lucide-react';
 import './styles.css';
+import './theme.css';
 
 type FormatInfo = {
   key: string;
@@ -818,9 +817,6 @@ function App() {
           <div className="brand-icon"><Scissors size={23} /></div>
           <div>
             <h1>Web Video Clipper</h1>
-            {showHeaderDetails && (
-              <p>Python + FFmpeg 后端，多格式本地视频裁剪</p>
-            )}
           </div>
         </div>
         {showHeaderDetails && (
@@ -861,12 +857,6 @@ function App() {
             <button type="button" className={activeView === 'model' ? 'active' : ''} onClick={() => navigate('model')}>
               <CloudDownload size={15} /> 模型下载
             </button>
-          </div>
-        )}
-        {showHeaderDetails && (
-          <div className="header-badges">
-            <span><ShieldCheck size={15} /> 本地处理</span>
-            <span><Video size={15} /> {formats.length} 种格式</span>
           </div>
         )}
       </header>
