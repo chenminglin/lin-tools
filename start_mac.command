@@ -7,7 +7,8 @@ PROJECT_DIR="${0:A:h}"
 VENV_PYTHON="$PROJECT_DIR/.env/bin/python"
 FRONTEND_DIR="$PROJECT_DIR/frontend"
 FRONTEND_INDEX="$FRONTEND_DIR/dist/index.html"
-APP_URL="http://127.0.0.1:5000"
+APP_PORT="5050"
+APP_URL="http://127.0.0.1:$APP_PORT"
 
 cd "$PROJECT_DIR"
 
@@ -38,7 +39,7 @@ if [[ ! -f "$FRONTEND_INDEX" ]] || \
 fi
 
 echo "正在启动 Lin Tools：$APP_URL"
-"$VENV_PYTHON" run_web.py &
+LIN_TOOLS_PORT="$APP_PORT" "$VENV_PYTHON" run_web.py &
 SERVER_PID=$!
 trap 'kill "$SERVER_PID" 2>/dev/null || true' EXIT INT TERM
 
