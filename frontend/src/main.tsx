@@ -1281,11 +1281,13 @@ function App() {
         </main>
       )}
 
-      <footer className="footer">
-        <span>FFmpeg powered</span>
-        <span>Local uploads are stored under runtime/</span>
-        <button type="button" onClick={reset}><RotateCcw size={14} /> 重置</button>
-      </footer>
+      {showHeaderDetails && (
+        <footer className="footer">
+          <span>FFmpeg powered</span>
+          <span>Local uploads are stored under runtime/</span>
+          <button type="button" onClick={reset}><RotateCcw size={14} /> 重置</button>
+        </footer>
+      )}
     </div>
   );
 }

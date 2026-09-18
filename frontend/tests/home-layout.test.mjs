@@ -10,6 +10,7 @@ test('首页隐藏辅助头部内容，工具页继续显示', () => {
   assert.match(mainSource, /showHeaderDetails && \(\s*<p>Python \+ FFmpeg 后端，多格式本地视频裁剪<\/p>/);
   assert.match(mainSource, /showHeaderDetails && \(\s*<div className="header-actions">/);
   assert.match(mainSource, /showHeaderDetails && \(\s*<div className="header-badges">/);
+  assert.match(mainSource, /showHeaderDetails && \(\s*<footer className="footer">/);
 });
 
 test('工具入口按桌面三列、平板两列、手机一列响应', () => {
