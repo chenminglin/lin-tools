@@ -24,6 +24,8 @@ import {
   Trash2,
   Upload,
   Video,
+  Volume2,
+  VolumeX,
   Wand2,
   ZoomIn
 } from 'lucide-react';
@@ -138,17 +140,28 @@ type MergeVideoItem = {
   error?: string;
 };
 
+type SynchronizedVideoItem = {
+  id: string;
+  filename: string;
+  localUrl: string;
+  duration: number;
+  muted: boolean;
+  status: 'loading' | 'ready' | 'failed';
+};
+
 type AudioSilenceSegment = {
   id: string;
   insertAt: string;
   duration: string;
 };
 
-type PageView = 'clipper' | 'merge' | 'calculator' | 'audio' | 'audioSpeed' | 'extractAudio' | 'downloader' | 'model' | 'watermark' | 'imageResize';
+type PageView = 'home' | 'clipper' | 'merge' | 'syncPlay' | 'calculator' | 'audio' | 'audioSpeed' | 'extractAudio' | 'downloader' | 'model' | 'watermark' | 'imageResize';
 
 const pagePaths: Record<PageView, string> = {
+  home: '/',
   clipper: '/video',
   merge: '/merge',
+  syncPlay: '/sync-play',
   calculator: '/calculator',
   audio: '/audio',
   audioSpeed: '/audio-speed',
@@ -160,6 +173,8 @@ const pagePaths: Record<PageView, string> = {
 };
 
 function pageFromPath(pathname: string): PageView {
+  if (pathname === '/') return 'home';
+  if (pathname.startsWith('/sync-play')) return 'syncPlay';
   if (pathname.startsWith('/merge')) return 'merge';
   if (pathname.startsWith('/calculator')) return 'calculator';
   if (pathname.startsWith('/extract-audio')) return 'extractAudio';
@@ -222,6 +237,7 @@ function App() {
   const [downloadUrl, setDownloadUrl] = useState('');
   const [downloadName, setDownloadName] = useState('');
   const [isPlaying, setIsPlaying] = useState(false);
+  const [videoOrientation, setVideoOrientation] = useState<'portrait' | 'landscape'>('landscape');
   const [thumbnails, setThumbnails] = useState<string[]>([]);
   const [isThumbnailing, setIsThumbnailing] = useState(false);
   const [zoomRange, setZoomRange] = useState({ start: 0, end: 0 });
@@ -375,6 +391,11 @@ function App() {
     setFileName(payload.filename);
     setFileUrl(previewUrl);
     setMetadata(payload.info);
+    setVideoOrientation(
+      payload.info.width && payload.info.height && payload.info.height > payload.info.width
+        ? 'portrait'
+        : 'landscape'
+    );
     setStartTime('00:00.000');
     setEndTime(nextDuration ? formatTime(nextDuration) : '');
     setCurrentTime(0);
@@ -799,11 +820,17 @@ function App() {
           </div>
         </div>
         <div className="header-actions">
+          <button type="button" className={activeView === 'home' ? 'active' : ''} onClick={() => navigate('home')}>
+            <Layers size={15} /> 首页
+          </button>
           <button type="button" className={activeView === 'clipper' ? 'active' : ''} onClick={() => navigate('clipper')}>
             <Scissors size={15} /> 裁剪工具
           </button>
           <button type="button" className={activeView === 'merge' ? 'active' : ''} onClick={() => navigate('merge')}>
             <Layers size={15} /> 视频合并
+          </button>
+          <button type="button" className={activeView === 'syncPlay' ? 'active' : ''} onClick={() => navigate('syncPlay')}>
+            <Play size={15} /> 同步播放
           </button>
           <button type="button" className={activeView === 'calculator' ? 'active' : ''} onClick={() => navigate('calculator')}>
             <Calculator size={15} /> 比例计算器
@@ -836,10 +863,14 @@ function App() {
         </div>
       </header>
 
-      {activeView === 'calculator' ? (
+      {activeView === 'home' ? (
+        <HomePage onNavigate={navigate} />
+      ) : activeView === 'calculator' ? (
         <RatioCalculator metadata={metadata} onBack={() => navigate('clipper')} />
       ) : activeView === 'merge' ? (
         <MergePage />
+      ) : activeView === 'syncPlay' ? (
+        <SynchronizedPlaybackPage />
       ) : activeView === 'watermark' ? (
         <WatermarkPage />
       ) : activeView === 'imageResize' ? (
@@ -995,13 +1026,20 @@ function App() {
               />
             ) : (
               <div className="video-card">
-                <div className="video-frame">
+                <div className={`video-frame ${videoOrientation === 'portrait' ? 'is-portrait' : 'is-landscape'}`}>
                   <video
                     ref={videoRef}
                     src={fileUrl}
                     controls={false}
                     playsInline
-                    style={{ filter: selectedFilter.css }}
+                    onClick={togglePlay}
+                    style={{
+                      filter: selectedFilter.css,
+                      width: '100%',
+                      height: '100%',
+                      objectFit: 'contain',
+                      objectPosition: 'center'
+                    }}
                     onPlay={() => setIsPlaying(true)}
                     onPause={() => setIsPlaying(false)}
                     onTimeUpdate={(event) => {
@@ -1016,12 +1054,14 @@ function App() {
                       setCurrentTime(nextTime);
                     }}
                     onLoadedMetadata={(event) => {
+                      setVideoOrientation(
+                        event.currentTarget.videoHeight > event.currentTarget.videoWidth
+                          ? 'portrait'
+                          : 'landscape'
+                      );
                       if (!endTime) setEndTime(formatTime(event.currentTarget.duration));
                     }}
                   />
-                  <button className="center-play" type="button" onClick={togglePlay} aria-label="播放或暂停">
-                    {isPlaying ? <Pause size={28} fill="currentColor" /> : <Play size={30} fill="currentColor" />}
-                  </button>
                   <div className="video-toolbar">
                     <button type="button" onClick={togglePlay}>{isPlaying ? <Pause size={16} /> : <Play size={16} />}</button>
                     <span>{fileName}</span>
@@ -1242,6 +1282,57 @@ function App() {
   );
 }
 
+function HomePage({ onNavigate }: { onNavigate: (view: PageView) => void }) {
+  const tools: Array<{
+    view: Exclude<PageView, 'home'>;
+    title: string;
+    description: string;
+    category: string;
+    icon: React.ComponentType<{ size?: number }>;
+    featured?: boolean;
+  }> = [
+    { view: 'clipper', title: '视频裁剪', description: '截取片段、转换格式并调整画面。', category: '视频', icon: Scissors, featured: true },
+    { view: 'merge', title: '视频合并', description: '按顺序拼接多个视频文件。', category: '视频', icon: Layers, featured: true },
+    { view: 'syncPlay', title: '同步播放', description: '并排打开多个视频并同时播放。', category: '视频', icon: Play, featured: true },
+    { view: 'extractAudio', title: '提取音频', description: '从视频中导出指定音轨。', category: '音频', icon: Music, featured: true },
+    { view: 'audio', title: '音频编辑', description: '查看信息、裁剪并插入静音。', category: '音频', icon: SlidersHorizontal },
+    { view: 'audioSpeed', title: '音频变速', description: '调整播放速度并导出新文件。', category: '音频', icon: Clock3 },
+    { view: 'watermark', title: '图片去水印', description: '检测并处理图片中的水印。', category: '图片', icon: Wand2 },
+    { view: 'imageResize', title: '图片改尺寸', description: '快速缩放图片并保持比例。', category: '图片', icon: ImageIcon },
+    { view: 'calculator', title: '比例计算器', description: '计算画面比例与目标分辨率。', category: '辅助', icon: Calculator },
+    { view: 'downloader', title: '视频下载', description: '从链接下载在线视频资源。', category: '下载', icon: CloudDownload },
+    { view: 'model', title: '模型下载', description: '通过镜像下载 Hugging Face 模型。', category: '下载', icon: Database }
+  ];
+
+  return (
+    <main className="home-page">
+      <section className="tool-directory" aria-label="工具列表">
+        <div className="tool-grid">
+          {tools.map((tool) => {
+            const Icon = tool.icon;
+            return (
+              <button
+                key={tool.view}
+                type="button"
+                className={`tool-entry${tool.featured ? ' featured' : ''}`}
+                onClick={() => onNavigate(tool.view)}
+              >
+                <span className="tool-icon"><Icon size={22} /></span>
+                <span className="tool-copy">
+                  <small>{tool.category}</small>
+                  <strong>{tool.title}</strong>
+                  <span>{tool.description}</span>
+                </span>
+                <span className="tool-arrow" aria-hidden="true">→</span>
+              </button>
+            );
+          })}
+        </div>
+      </section>
+    </main>
+  );
+}
+
 function TrimTimeline({
   duration,
   currentTime,
@@ -1458,6 +1549,307 @@ function UploadCard({
         <em>支持 MP4、WebM、MOV、MKV、AVI、FLV、WMV、TS 等格式</em>
       </button>
     </div>
+  );
+}
+
+function SynchronizedPlaybackPage() {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const videoRefs = useRef(new Map<string, HTMLVideoElement>());
+  const itemsRef = useRef<SynchronizedVideoItem[]>([]);
+  const animationRef = useRef<number | null>(null);
+  const currentTimeRef = useRef(0);
+  const clockRef = useRef({ mediaTime: 0, startedAt: 0 });
+  const [items, setItems] = useState<SynchronizedVideoItem[]>([]);
+  const [isDragActive, setIsDragActive] = useState(false);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [currentTime, setCurrentTime] = useState(0);
+
+  const readyItems = useMemo(() => items.filter((item) => item.status === 'ready'), [items]);
+  const maxDuration = useMemo(
+    () => readyItems.reduce((maximum, item) => Math.max(maximum, item.duration), 0),
+    [readyItems]
+  );
+
+  useEffect(() => {
+    itemsRef.current = items;
+  }, [items]);
+
+  useEffect(() => {
+    return () => {
+      if (animationRef.current !== null) window.cancelAnimationFrame(animationRef.current);
+      itemsRef.current.forEach((item) => URL.revokeObjectURL(item.localUrl));
+    };
+  }, []);
+
+  const stopAnimation = () => {
+    if (animationRef.current !== null) {
+      window.cancelAnimationFrame(animationRef.current);
+      animationRef.current = null;
+    }
+  };
+
+  const pauseAll = () => {
+    if (isPlaying) {
+      const elapsed = (performance.now() - clockRef.current.startedAt) / 1000;
+      const nextTime = Math.min(maxDuration, clockRef.current.mediaTime + elapsed);
+      currentTimeRef.current = nextTime;
+      setCurrentTime(nextTime);
+    }
+    stopAnimation();
+    videoRefs.current.forEach((video) => video.pause());
+    setIsPlaying(false);
+  };
+
+  const setAllCurrentTimes = (nextTime: number) => {
+    const safeTime = Math.max(0, Math.min(maxDuration, nextTime));
+    currentTimeRef.current = safeTime;
+    setCurrentTime(safeTime);
+    videoRefs.current.forEach((video) => {
+      if (Number.isFinite(video.duration) && video.duration > 0) {
+        video.currentTime = Math.min(safeTime, Math.max(0, video.duration - 0.01));
+      }
+    });
+    if (isPlaying) {
+      clockRef.current = { mediaTime: safeTime, startedAt: performance.now() };
+    }
+  };
+
+  const runClock = () => {
+    const tick = () => {
+      const elapsed = (performance.now() - clockRef.current.startedAt) / 1000;
+      const targetTime = Math.min(maxDuration, clockRef.current.mediaTime + elapsed);
+      currentTimeRef.current = targetTime;
+      setCurrentTime(targetTime);
+
+      videoRefs.current.forEach((video) => {
+        if (
+          Number.isFinite(video.duration)
+          && targetTime < video.duration - 0.03
+          && Math.abs(video.currentTime - targetTime) > 0.16
+        ) {
+          video.currentTime = targetTime;
+        }
+      });
+
+      if (targetTime >= maxDuration) {
+        videoRefs.current.forEach((video) => video.pause());
+        animationRef.current = null;
+        setIsPlaying(false);
+        return;
+      }
+      animationRef.current = window.requestAnimationFrame(tick);
+    };
+    stopAnimation();
+    animationRef.current = window.requestAnimationFrame(tick);
+  };
+
+  const playAll = async () => {
+    if (readyItems.length === 0 || maxDuration <= 0) return;
+    let startAt = currentTimeRef.current;
+    if (startAt >= maxDuration - 0.04) {
+      startAt = 0;
+      setAllCurrentTimes(0);
+    }
+
+    const playableVideos = readyItems
+      .map((item) => videoRefs.current.get(item.id))
+      .filter((video): video is HTMLVideoElement => video !== undefined && startAt < video.duration - 0.03);
+    if (playableVideos.length === 0) return;
+
+    playableVideos.forEach((video) => {
+      video.currentTime = Math.min(startAt, Math.max(0, video.duration - 0.01));
+    });
+    clockRef.current = { mediaTime: startAt, startedAt: performance.now() };
+    setIsPlaying(true);
+    runClock();
+    await Promise.allSettled(playableVideos.map((video) => video.play()));
+  };
+
+  const addFiles = (fileList: FileList | File[]) => {
+    const files = Array.from(fileList).filter((file) => (
+      file.size > 0
+      && (file.type.startsWith('video/') || /\.(mp4|mkv|mov|avi|webm|flv|wmv|m4v|mpg|mpeg|3gp|ts|mts|m2ts|ogg|ogv)$/i.test(file.name))
+    ));
+    if (files.length === 0) return;
+    pauseAll();
+    const nextItems = files.map((file) => ({
+      id: makeClientId(),
+      filename: file.name,
+      localUrl: URL.createObjectURL(file),
+      duration: 0,
+      muted: true,
+      status: 'loading' as const
+    }));
+    setItems((previous) => [...previous, ...nextItems]);
+  };
+
+  const updateMetadata = (id: string, video: HTMLVideoElement) => {
+    setItems((previous) => previous.map((item) => item.id === id
+      ? { ...item, duration: Number.isFinite(video.duration) ? video.duration : 0, status: 'ready' }
+      : item));
+  };
+
+  const markFailed = (id: string) => {
+    setItems((previous) => previous.map((item) => item.id === id ? { ...item, status: 'failed' } : item));
+  };
+
+  const toggleMuted = (id: string) => {
+    setItems((previous) => previous.map((item) => {
+      if (item.id !== id) return item;
+      const muted = !item.muted;
+      const video = videoRefs.current.get(id);
+      if (video) video.muted = muted;
+      return { ...item, muted };
+    }));
+  };
+
+  const removeItem = (id: string) => {
+    pauseAll();
+    setItems((previous) => {
+      const target = previous.find((item) => item.id === id);
+      if (target) URL.revokeObjectURL(target.localUrl);
+      return previous.filter((item) => item.id !== id);
+    });
+    videoRefs.current.delete(id);
+  };
+
+  const clearItems = () => {
+    pauseAll();
+    items.forEach((item) => URL.revokeObjectURL(item.localUrl));
+    videoRefs.current.clear();
+    setItems([]);
+    currentTimeRef.current = 0;
+    setCurrentTime(0);
+  };
+
+  return (
+    <main className="sync-page">
+      <section
+        className={`sync-drop panel ${isDragActive ? 'active' : ''}`}
+        onDragEnter={(event) => {
+          event.preventDefault();
+          setIsDragActive(true);
+        }}
+        onDragOver={(event) => event.preventDefault()}
+        onDragLeave={() => setIsDragActive(false)}
+        onDrop={(event) => {
+          event.preventDefault();
+          setIsDragActive(false);
+          addFiles(event.dataTransfer.files);
+        }}
+      >
+        <input
+          ref={inputRef}
+          type="file"
+          accept="video/*,.mp4,.mkv,.mov,.avi,.webm,.flv,.wmv,.m4v,.mpg,.mpeg,.3gp,.ts,.mts,.m2ts,.ogg,.ogv"
+          multiple
+          hidden
+          onChange={(event) => {
+            if (event.target.files) addFiles(event.target.files);
+            event.currentTarget.value = '';
+          }}
+        />
+        <span className="upload-icon"><Play size={32} /></span>
+        <div>
+          <h2>同时打开多个视频</h2>
+          <p>一次选择多个文件，所有视频默认静音，并从同一时间点同步播放。</p>
+        </div>
+        <button type="button" className="sample-button" onClick={() => inputRef.current?.click()}>
+          <Upload size={16} />
+          {items.length > 0 ? '继续添加视频' : '选择多个视频'}
+        </button>
+      </section>
+
+      {items.length > 0 && (
+        <section className="sync-control panel">
+          <div className="sync-control-main">
+            <button
+              type="button"
+              className="sync-play-button"
+              disabled={readyItems.length === 0}
+              onClick={() => isPlaying ? pauseAll() : void playAll()}
+            >
+              {isPlaying ? <Pause size={20} /> : <Play size={20} />}
+              {isPlaying ? '全部暂停' : '开始播放'}
+            </button>
+            <div className="sync-timeline">
+              <div>
+                <strong>{formatTime(currentTime, false)}</strong>
+                <span>/ {formatTime(maxDuration, false)}</span>
+              </div>
+              <input
+                type="range"
+                min="0"
+                max={maxDuration || 0}
+                step="0.01"
+                value={Math.min(currentTime, maxDuration)}
+                disabled={maxDuration <= 0}
+                aria-label="同步播放进度"
+                onChange={(event) => setAllCurrentTimes(Number(event.target.value))}
+              />
+            </div>
+          </div>
+          <div className="sync-control-meta">
+            <span>{readyItems.length} 个视频已就绪</span>
+            <span><VolumeX size={15} /> 默认全部静音</span>
+            <button type="button" onClick={clearItems}><Trash2 size={15} /> 清空</button>
+          </div>
+        </section>
+      )}
+
+      {items.length === 0 ? (
+        <section className="sync-empty panel">
+          <FileVideo size={28} />
+          <strong>还没有打开视频</strong>
+          <span>可多选文件，也可以把多个视频直接拖到上方区域。</span>
+        </section>
+      ) : (
+        <section className="sync-video-grid" aria-label="同步视频列表">
+          {items.map((item, index) => (
+            <article className={`sync-video-card panel ${item.status}`} key={item.id}>
+              <div className="sync-video-frame">
+                <video
+                  ref={(element) => {
+                    if (element) videoRefs.current.set(item.id, element);
+                    else videoRefs.current.delete(item.id);
+                  }}
+                  src={item.localUrl}
+                  muted={item.muted}
+                  playsInline
+                  preload="metadata"
+                  onLoadedMetadata={(event) => updateMetadata(item.id, event.currentTarget)}
+                  onError={() => markFailed(item.id)}
+                />
+                {item.status === 'loading' && <span className="sync-video-state"><Loader2 className="spin" size={18} /> 正在读取</span>}
+                {item.status === 'failed' && <span className="sync-video-state error"><AlertCircle size={18} /> 无法播放</span>}
+                <span className="sync-video-index">{index + 1}</span>
+              </div>
+              <div className="sync-video-info">
+                <div>
+                  <strong title={item.filename}>{item.filename}</strong>
+                  <span>{item.duration ? formatTime(item.duration, false) : '读取时长中'}</span>
+                </div>
+                <div className="sync-video-actions">
+                  <button
+                    type="button"
+                    className={item.muted ? '' : 'sound-on'}
+                    disabled={item.status !== 'ready'}
+                    onClick={() => toggleMuted(item.id)}
+                    title={item.muted ? '打开这个视频的声音' : '将这个视频静音'}
+                  >
+                    {item.muted ? <VolumeX size={17} /> : <Volume2 size={17} />}
+                    {item.muted ? '打开声音' : '声音已开启'}
+                  </button>
+                  <button type="button" className="remove" onClick={() => removeItem(item.id)} title="移除视频">
+                    <Trash2 size={17} />
+                  </button>
+                </div>
+              </div>
+            </article>
+          ))}
+        </section>
+      )}
+    </main>
   );
 }
 
