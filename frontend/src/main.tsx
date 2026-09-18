@@ -1282,26 +1282,43 @@ function App() {
   );
 }
 
+function HomeToolIcon({
+  image,
+  icon: Icon
+}: {
+  image: string;
+  icon: React.ComponentType<{ size?: number }>;
+}) {
+  const [failed, setFailed] = useState(false);
+
+  return (
+    <span className="tool-icon" aria-hidden="true">
+      {failed ? <Icon size={22} /> : <img src={image} alt="" className="tool-character-icon" onError={() => setFailed(true)} />}
+    </span>
+  );
+}
+
 function HomePage({ onNavigate }: { onNavigate: (view: PageView) => void }) {
   const tools: Array<{
     view: Exclude<PageView, 'home'>;
     title: string;
     description: string;
     category: string;
+    image: string;
     icon: React.ComponentType<{ size?: number }>;
     featured?: boolean;
   }> = [
-    { view: 'clipper', title: '视频裁剪', description: '截取片段、转换格式并调整画面。', category: '视频', icon: Scissors, featured: true },
-    { view: 'merge', title: '视频合并', description: '按顺序拼接多个视频文件。', category: '视频', icon: Layers, featured: true },
-    { view: 'syncPlay', title: '同步播放', description: '并排打开多个视频并同时播放。', category: '视频', icon: Play, featured: true },
-    { view: 'extractAudio', title: '提取音频', description: '从视频中导出指定音轨。', category: '音频', icon: Music, featured: true },
-    { view: 'audio', title: '音频编辑', description: '查看信息、裁剪并插入静音。', category: '音频', icon: SlidersHorizontal },
-    { view: 'audioSpeed', title: '音频变速', description: '调整播放速度并导出新文件。', category: '音频', icon: Clock3 },
-    { view: 'watermark', title: '图片去水印', description: '检测并处理图片中的水印。', category: '图片', icon: Wand2 },
-    { view: 'imageResize', title: '图片改尺寸', description: '快速缩放图片并保持比例。', category: '图片', icon: ImageIcon },
-    { view: 'calculator', title: '比例计算器', description: '计算画面比例与目标分辨率。', category: '辅助', icon: Calculator },
-    { view: 'downloader', title: '视频下载', description: '从链接下载在线视频资源。', category: '下载', icon: CloudDownload },
-    { view: 'model', title: '模型下载', description: '通过镜像下载 Hugging Face 模型。', category: '下载', icon: Database }
+    { view: 'clipper', title: '视频裁剪', description: '截取片段、转换格式并调整画面。', category: '视频', image: '/icons/tools/video-clip.png', icon: Scissors, featured: true },
+    { view: 'merge', title: '视频合并', description: '按顺序拼接多个视频文件。', category: '视频', image: '/icons/tools/video-merge.png', icon: Layers, featured: true },
+    { view: 'syncPlay', title: '同步播放', description: '并排打开多个视频并同时播放。', category: '视频', image: '/icons/tools/sync-play.png', icon: Play, featured: true },
+    { view: 'extractAudio', title: '提取音频', description: '从视频中导出指定音轨。', category: '音频', image: '/icons/tools/extract-audio.png', icon: Music, featured: true },
+    { view: 'audio', title: '音频编辑', description: '查看信息、裁剪并插入静音。', category: '音频', image: '/icons/tools/audio-edit.png', icon: SlidersHorizontal },
+    { view: 'audioSpeed', title: '音频变速', description: '调整播放速度并导出新文件。', category: '音频', image: '/icons/tools/audio-speed.png', icon: Clock3 },
+    { view: 'watermark', title: '图片去水印', description: '检测并处理图片中的水印。', category: '图片', image: '/icons/tools/remove-watermark.png', icon: Wand2 },
+    { view: 'imageResize', title: '图片改尺寸', description: '快速缩放图片并保持比例。', category: '图片', image: '/icons/tools/image-resize.png', icon: ImageIcon },
+    { view: 'calculator', title: '比例计算器', description: '计算画面比例与目标分辨率。', category: '辅助', image: '/icons/tools/ratio-calculator.png', icon: Calculator },
+    { view: 'downloader', title: '视频下载', description: '从链接下载在线视频资源。', category: '下载', image: '/icons/tools/video-download.png', icon: CloudDownload },
+    { view: 'model', title: '模型下载', description: '通过镜像下载 Hugging Face 模型。', category: '下载', image: '/icons/tools/model-download.png', icon: Database }
   ];
 
   return (
@@ -1309,7 +1326,6 @@ function HomePage({ onNavigate }: { onNavigate: (view: PageView) => void }) {
       <section className="tool-directory" aria-label="工具列表">
         <div className="tool-grid">
           {tools.map((tool) => {
-            const Icon = tool.icon;
             return (
               <button
                 key={tool.view}
@@ -1317,7 +1333,7 @@ function HomePage({ onNavigate }: { onNavigate: (view: PageView) => void }) {
                 className={`tool-entry${tool.featured ? ' featured' : ''}`}
                 onClick={() => onNavigate(tool.view)}
               >
-                <span className="tool-icon"><Icon size={22} /></span>
+                <HomeToolIcon image={tool.image} icon={tool.icon} />
                 <span className="tool-copy">
                   <small>{tool.category}</small>
                   <strong>{tool.title}</strong>
