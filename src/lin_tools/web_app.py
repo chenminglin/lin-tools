@@ -38,6 +38,11 @@ FRONTEND_DIST = BASE_DIR / "frontend" / "dist"
 HF_MIRROR_ENDPOINT = "https://hf-mirror.com"
 MODEL_DOWNLOAD_RETRIES = 5
 IMAGE_INPUT_EXTENSIONS = {".png", ".jpg", ".jpeg", ".webp", ".bmp", ".tif", ".tiff"}
+IMAGE_OUTPUT_FORMATS = {
+    "png": ("PNG", ".png"),
+    "jpeg": ("JPEG", ".jpg"),
+    "webp": ("WEBP", ".webp"),
+}
 MODEL_REPO_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]*(/[A-Za-z0-9][A-Za-z0-9._-]*)?$")
 
 uploads: dict[str, dict[str, Any]] = {}
@@ -555,10 +560,13 @@ def create_app() -> Flask:
         try:
             width = _parse_image_dimension(request.form.get("width"), "宽度")
             height = _parse_image_dimension(request.form.get("height"), "高度")
+            scale_percent = _parse_image_scale_percent(request.form.get("scale_percent"))
+            output_format = _parse_image_output_format(request.form.get("output_format"))
+            quality = _parse_image_quality(request.form.get("quality"))
             keep_aspect = str(request.form.get("keep_aspect") or "true").lower() == "true"
-            if not keep_aspect and (width is None or height is None):
+            if scale_percent is None and not keep_aspect and (width is None or height is None):
                 raise ValueError("不保持比例时必须同时填写宽度和高度。")
-            if width is None and height is None:
+            if scale_percent is None and width is None and height is None:
                 raise ValueError("请至少填写宽度或高度。")
         except ValueError as exc:
             return jsonify({"error": str(exc)}), 400
@@ -574,9 +582,14 @@ def create_app() -> Flask:
                 source_width, source_height = image.size
                 if source_width <= 0 or source_height <= 0:
                     raise ValueError("图片尺寸无效。")
-                target_width, target_height = _calculate_image_resize(
-                    source_width, source_height, width, height, keep_aspect
-                )
+                if scale_percent is not None:
+                    target_width, target_height = _calculate_image_resize_by_percent(
+                        source_width, source_height, scale_percent
+                    )
+                else:
+                    target_width, target_height = _calculate_image_resize(
+                        source_width, source_height, width, height, keep_aspect
+                    )
                 resized = image.resize((target_width, target_height), Image.Resampling.LANCZOS)
                 if resized.mode not in {"RGB", "RGBA"}:
                     resized = resized.convert("RGBA" if "transparency" in image.info else "RGB")
@@ -587,10 +600,26 @@ def create_app() -> Flask:
 
         job_id = uuid.uuid4().hex
         base_name = secure_filename(Path(original_name).stem) or "image"
-        output_name = f"{base_name}_{target_width}x{target_height}_{job_id[:8]}.png"
+        pillow_format, output_extension = IMAGE_OUTPUT_FORMATS[output_format]
+        output_name = f"{base_name}_{target_width}x{target_height}_{job_id[:8]}{output_extension}"
         output_path = OUTPUT_DIR / output_name
         try:
-            resized.save(output_path, format="PNG")
+            if output_format == "jpeg" and resized.mode != "RGB":
+                if resized.mode == "RGBA":
+                    flattened = Image.new("RGB", resized.size, "white")
+                    flattened.paste(resized, mask=resized.getchannel("A"))
+                    resized = flattened
+                else:
+                    resized = resized.convert("RGB")
+            save_options: dict[str, Any] = {"format": pillow_format}
+            if output_format in {"jpeg", "webp"}:
+                save_options["quality"] = quality
+                save_options["method"] = 6 if output_format == "webp" else None
+                if save_options["method"] is None:
+                    del save_options["method"]
+            elif output_format == "png":
+                save_options["optimize"] = True
+            resized.save(output_path, **save_options)
         except OSError as exc:
             return jsonify({"error": f"保存图片失败：{exc}"}), 500
 
@@ -603,7 +632,14 @@ def create_app() -> Flask:
                 "output_path": output_path,
                 "output_name": output_name,
                 "error": None,
-                "meta": {"width": target_width, "height": target_height, "keep_aspect": keep_aspect},
+                "meta": {
+                    "width": target_width,
+                    "height": target_height,
+                    "keep_aspect": keep_aspect,
+                    "scale_percent": scale_percent,
+                    "output_format": output_format,
+                    "quality": quality,
+                },
             }
         return jsonify({
             "job_id": job_id,
@@ -906,6 +942,47 @@ def _parse_image_dimension(value: Any, label: str) -> int | None:
     if not 1 <= dimension <= MAX_IMAGE_DIMENSION:
         raise ValueError(f"{label}必须在 1 到 {MAX_IMAGE_DIMENSION} 之间。")
     return dimension
+
+
+def _parse_image_scale_percent(value: Any) -> float | None:
+    text = str(value or "").strip()
+    if not text:
+        return None
+    try:
+        percent = float(text)
+    except ValueError as exc:
+        raise ValueError("缩放比例必须是数字。") from exc
+    if not 1 <= percent <= 100:
+        raise ValueError("缩放比例必须在 1% 到 100% 之间。")
+    return percent
+
+
+def _parse_image_output_format(value: Any) -> str:
+    output_format = str(value or "png").strip().lower()
+    if output_format not in IMAGE_OUTPUT_FORMATS:
+        raise ValueError("保存格式仅支持 PNG、JPEG 或 WebP。")
+    return output_format
+
+
+def _parse_image_quality(value: Any) -> int:
+    text = str(value or "95").strip()
+    try:
+        quality = int(text)
+    except ValueError as exc:
+        raise ValueError("图片质量必须是整数。") from exc
+    if not 1 <= quality <= 100:
+        raise ValueError("图片质量必须在 1 到 100 之间。")
+    return quality
+
+
+def _calculate_image_resize_by_percent(
+    source_width: int, source_height: int, scale_percent: float
+) -> tuple[int, int]:
+    target_width = max(1, round(source_width * scale_percent / 100))
+    target_height = max(1, round(source_height * scale_percent / 100))
+    if target_width > MAX_IMAGE_DIMENSION or target_height > MAX_IMAGE_DIMENSION:
+        raise ValueError(f"缩放后的尺寸不能超过 {MAX_IMAGE_DIMENSION} 像素。")
+    return target_width, target_height
 
 
 def _calculate_image_resize(

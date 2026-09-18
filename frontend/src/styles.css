@@ -1832,6 +1832,96 @@ textarea:focus {
   width: 100%;
 }
 
+.image-resize-mode {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+  padding: 4px;
+  border-radius: 12px;
+  background: #f1f5f9;
+}
+
+.image-resize-mode button {
+  padding: 9px 12px;
+  border: 0;
+  border-radius: 9px;
+  color: var(--muted);
+  background: transparent;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.image-resize-mode button.active {
+  color: var(--indigo);
+  background: white;
+  box-shadow: 0 1px 3px rgb(15 23 42 / 12%);
+}
+
+.image-resize-percent {
+  display: grid;
+  gap: 7px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.image-resize-percent > span {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.image-resize-percent input {
+  width: 100%;
+  accent-color: var(--indigo);
+}
+
+.image-resize-percent strong {
+  color: var(--text);
+  font-size: 15px;
+}
+
+.image-resize-percent-scale {
+  display: flex;
+  justify-content: space-between;
+  color: var(--subtle);
+}
+
+.image-resize-export,
+.image-resize-export label,
+.image-resize-quality {
+  display: grid;
+  gap: 7px;
+}
+
+.image-resize-export > label {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.image-resize-quality > span,
+.image-resize-quality > div {
+  display: flex;
+  justify-content: space-between;
+}
+
+.image-resize-quality input {
+  width: 100%;
+  accent-color: var(--indigo);
+}
+
+.image-resize-quality strong {
+  color: var(--text);
+  font-size: 15px;
+}
+
+.image-resize-quality small {
+  color: var(--subtle);
+}
+
 .image-resize-aspect {
   display: flex;
   align-items: center;

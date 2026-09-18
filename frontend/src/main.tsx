@@ -2626,7 +2626,11 @@ function ImageResizePage() {
   const [sourceSize, setSourceSize] = useState<{ width: number; height: number } | null>(null);
   const [width, setWidth] = useState('');
   const [height, setHeight] = useState('');
+  const [resizeMode, setResizeMode] = useState<'pixels' | 'percent'>('pixels');
+  const [scalePercent, setScalePercent] = useState('100');
   const [keepAspect, setKeepAspect] = useState(true);
+  const [outputFormat, setOutputFormat] = useState<'png' | 'jpeg' | 'webp'>('png');
+  const [quality, setQuality] = useState('95');
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState('');
   const [downloadUrl, setDownloadUrl] = useState('');
@@ -2671,9 +2675,15 @@ function ImageResizePage() {
     try {
       const body = new FormData();
       body.append('image', file);
-      body.append('width', width);
-      body.append('height', height);
-      body.append('keep_aspect', String(keepAspect));
+      body.append('output_format', outputFormat);
+      body.append('quality', quality);
+      if (resizeMode === 'percent') {
+        body.append('scale_percent', scalePercent);
+      } else {
+        body.append('width', width);
+        body.append('height', height);
+        body.append('keep_aspect', String(keepAspect));
+      }
       const payload = await readJsonResponse<{ download_url: string; preview_url: string; output_name: string; width: number; height: number }>(
         await fetch('/api/image-resize', { method: 'POST', body }),
         '图片尺寸调整失败'
@@ -2688,6 +2698,10 @@ function ImageResizePage() {
       setIsProcessing(false);
     }
   };
+
+  const percentageOutputSize = sourceSize && Number.isFinite(Number(scalePercent)) && Number(scalePercent) >= 1
+    ? `${Math.max(1, Math.round(sourceSize.width * Number(scalePercent) / 100))} x ${Math.max(1, Math.round(sourceSize.height * Number(scalePercent) / 100))}`
+    : '';
 
   return (
     <main className="image-resize-page">
@@ -2738,12 +2752,29 @@ function ImageResizePage() {
 
         <aside className="panel watermark-status-panel image-resize-settings">
           <div className="panel-title"><SlidersHorizontal size={18} /><h2>目标分辨率</h2></div>
-          <div className="image-resize-fields">
-            <label><span>宽度（px）</span><input inputMode="numeric" value={width} placeholder="例如 1920" onChange={(event) => updateDimension(event.target.value, 'width')} /></label>
-            <label><span>高度（px）</span><input inputMode="numeric" value={height} placeholder="例如 1080" onChange={(event) => updateDimension(event.target.value, 'height')} /></label>
+          <div className="image-resize-mode" role="group" aria-label="调整方式">
+            <button type="button" className={resizeMode === 'pixels' ? 'active' : ''} onClick={() => setResizeMode('pixels')}>按像素</button>
+            <button type="button" className={resizeMode === 'percent' ? 'active' : ''} onClick={() => setResizeMode('percent')}>按百分比</button>
           </div>
-          <label className="image-resize-aspect"><input type="checkbox" checked={keepAspect} onChange={(event) => setKeepAspect(event.target.checked)} /><span>保持原始比例</span></label>
-          <small>{keepAspect ? '修改任一边会自动计算另一边；同时填写宽高时，图片会在该范围内等比缩放。' : '将严格使用填写的宽度和高度，图像可能发生拉伸。'}</small>
+          {resizeMode === 'pixels' ? <>
+            <div className="image-resize-fields">
+              <label><span>宽度（px）</span><input inputMode="numeric" value={width} placeholder="例如 1920" onChange={(event) => updateDimension(event.target.value, 'width')} /></label>
+              <label><span>高度（px）</span><input inputMode="numeric" value={height} placeholder="例如 1080" onChange={(event) => updateDimension(event.target.value, 'height')} /></label>
+            </div>
+            <label className="image-resize-aspect"><input type="checkbox" checked={keepAspect} onChange={(event) => setKeepAspect(event.target.checked)} /><span>保持原始比例</span></label>
+            <small>{keepAspect ? '修改任一边会自动计算另一边；同时填写宽高时，图片会在该范围内等比缩放。' : '将严格使用填写的宽度和高度，图像可能发生拉伸。'}</small>
+          </> : <>
+            <label className="image-resize-percent">
+              <span>缩放比例 <strong>{scalePercent}%</strong></span>
+              <input type="range" min="1" max="100" step="1" value={scalePercent} onChange={(event) => setScalePercent(event.target.value)} aria-label="缩放比例" />
+              <div className="image-resize-percent-scale"><small>1%</small><small>50%</small><small>100%</small></div>
+            </label>
+            <small>{percentageOutputSize ? `预计输出：${percentageOutputSize}。按百分比会始终保持原始比例。` : '请输入 1% 到 100% 之间的缩放比例。'}</small>
+          </>}
+          <div className="image-resize-export">
+            <label><span>保存格式</span><select value={outputFormat} onChange={(event) => setOutputFormat(event.target.value as 'png' | 'jpeg' | 'webp')}><option value="png">PNG（无损）</option><option value="jpeg">JPEG</option><option value="webp">WebP</option></select></label>
+            {outputFormat === 'png' ? <small>PNG 为无损格式，不需要设置图片质量。</small> : <label className="image-resize-quality"><span>图片质量 <strong>{quality}</strong></span><input type="range" min="1" max="100" step="1" value={quality} onChange={(event) => setQuality(event.target.value)} aria-label="图片质量" /><div><small>较小文件</small><small>较高质量</small></div></label>}
+          </div>
           <button type="button" className="download-button" disabled={!file || isProcessing} onClick={() => void resize()}>
             {isProcessing ? <Loader2 className="spin" size={18} /> : <Wand2 size={18} />}
             {isProcessing ? '正在调整…' : '开始调整尺寸'}
