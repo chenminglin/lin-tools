@@ -35,6 +35,7 @@ UPLOAD_DIR = RUNTIME_DIR / "uploads"
 OUTPUT_DIR = RUNTIME_DIR / "outputs"
 MODEL_DIR = RUNTIME_DIR / "models"
 FRONTEND_DIST = BASE_DIR / "frontend" / "dist"
+FRONTEND_PUBLIC = BASE_DIR / "frontend" / "public"
 HF_MIRROR_ENDPOINT = "https://hf-mirror.com"
 MODEL_DOWNLOAD_RETRIES = 5
 IMAGE_INPUT_EXTENSIONS = {".png", ".jpg", ".jpeg", ".webp", ".bmp", ".tif", ".tiff"}
@@ -94,6 +95,10 @@ def create_app() -> Flask:
     @app.get("/assets/<path:filename>")
     def frontend_assets(filename: str):
         return send_from_directory(FRONTEND_DIST / "assets", filename)
+
+    @app.get("/icons/<path:filename>")
+    def frontend_icons(filename: str):
+        return send_from_directory(FRONTEND_PUBLIC / "icons", filename)
 
     @app.get("/api/formats")
     def api_formats():
