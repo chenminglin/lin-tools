@@ -816,7 +816,7 @@ function App() {
         <div className="brand">
           <div className="brand-icon"><Scissors size={23} /></div>
           <div>
-            <h1>Web Video Clipper</h1>
+            <h1>Media Lab</h1>
           </div>
         </div>
         {showHeaderDetails && (
