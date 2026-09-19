@@ -340,9 +340,9 @@ a {
   border: 1px solid var(--border);
   border-radius: var(--r-lg);
   display: grid;
-  grid-template-columns: 46px minmax(0, 1fr) 22px;
+  grid-template-columns: 76px minmax(0, 1fr) 22px;
   align-items: start;
-  gap: 14px;
+  gap: 16px;
   color: var(--text);
   text-align: left;
   background: var(--surface);
@@ -395,8 +395,8 @@ a {
 }
 
 .tool-icon {
-  width: 64px;
-  height: 64px;
+  width: 76px;
+  height: 76px;
   flex: 0 0 auto;
   display: grid;
   place-items: center;
