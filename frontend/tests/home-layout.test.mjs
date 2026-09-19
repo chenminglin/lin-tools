@@ -50,3 +50,9 @@ test('角色插画不继承 Lucide 图标底板', () => {
   assert.match(mainSource, /className=\{`tool-icon\$\{failed \? '' : ' character'\}`\}/);
   assert.match(themeSource, /\.tool-entry \.tool-icon\.character\s*\{[^}]*background:\s*transparent\s*!important;[^}]*border:\s*0\s*!important;/s);
 });
+
+test('品牌图标使用 Media Lab 角色应用图标', () => {
+  assert.match(mainSource, /className="brand-icon character"/);
+  assert.match(mainSource, /src="\/icons\/app\/icon-64\.png\?v=media-lab-1"/);
+  assert.match(themeSource, /\.brand-icon\.character\s*\{[^}]*background:\s*transparent\s*!important;[^}]*border:\s*0\s*!important;/s);
+});

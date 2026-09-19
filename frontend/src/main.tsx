@@ -814,7 +814,9 @@ function App() {
     <div className="app">
       <header className="app-header">
         <div className="brand">
-          <div className="brand-icon"><Scissors size={23} /></div>
+          <div className="brand-icon character">
+            <img src="/icons/app/icon-64.png?v=media-lab-1" alt="Media Lab" />
+          </div>
           <div>
             <h1>Media Lab</h1>
           </div>
