@@ -100,6 +100,14 @@ def create_app() -> Flask:
     def frontend_icons(filename: str):
         return send_from_directory(FRONTEND_PUBLIC / "icons", filename)
 
+    @app.get("/site.webmanifest")
+    def frontend_manifest():
+        return send_from_directory(
+            FRONTEND_PUBLIC,
+            "site.webmanifest",
+            mimetype="application/manifest+json",
+        )
+
     @app.get("/api/formats")
     def api_formats():
         return jsonify(
